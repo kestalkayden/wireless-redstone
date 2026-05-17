@@ -1,0 +1,28 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="CC0-1.0"
+issueTrackerURL="https://github.com/kestalkayden/wireless-redstone/issues"
+
+[[mods]]
+modId="wirelessredstone"
+version="${version}"
+displayName="Wireless Redstone"
+description='''
+Wireless redstone transmitters and receivers. Channel + frequency pairing, owner-lock, one-to-many.
+'''
+authors="Kestalkayden"
+displayURL="https://github.com/kestalkayden/wireless-redstone"
+
+[[dependencies.wirelessredstone]]
+modId="neoforge"
+type="required"
+versionRange="[26.1,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.wirelessredstone]]
+modId="minecraft"
+type="required"
+versionRange="[26.1,26.2)"
+ordering="NONE"
+side="BOTH"

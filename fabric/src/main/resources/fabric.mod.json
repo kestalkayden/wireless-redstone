@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "wirelessredstone",
+  "version": "${version}",
+  "name": "Wireless Redstone",
+  "description": "Wireless redstone transmitters and receivers. Channel + frequency pairing, owner-lock, one-to-many.",
+  "authors": [
+    "Kestalkayden"
+  ],
+  "contact": {
+    "homepage": "https://github.com/kestalkayden/wireless-redstone",
+    "sources": "https://github.com/kestalkayden/wireless-redstone"
+  },
+  "license": "CC0-1.0",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.kestalkayden.wirelessredstone.WirelessRedstoneFabric"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.18.4",
+    "fabric-api": "*",
+    "minecraft": ">=26.1 <26.2",
+    "java": ">=25"
+  }
+}
