@@ -42,6 +42,6 @@ public final class ReceiverBlocks {
                 .pushReaction(PushReaction.DESTROY)));
 
         RECEIVER_ITEM = Registry.register(BuiltInRegistries.ITEM, id,
-            new BlockItem(RECEIVER, new Item.Properties().setId(itemKey).useBlockDescriptionPrefix()));
+            new ReceiverItem(RECEIVER, new Item.Properties().setId(itemKey).useBlockDescriptionPrefix()));
     }
 }

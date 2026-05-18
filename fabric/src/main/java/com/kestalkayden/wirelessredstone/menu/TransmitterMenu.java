@@ -16,13 +16,15 @@ public class TransmitterMenu extends AbstractContainerMenu {
 
     public static final int DATA_FREQ           = 0;
     public static final int DATA_CHAN           = 1;
-    public static final int DATA_LOCK           = 2;
-    public static final int DATA_RECEIVER_COUNT = 3;
-    public static final int DATA_SIZE           = 4;
+    public static final int DATA_PRIVATE        = 2;
+    public static final int DATA_EDIT_LOCK      = 3;
+    public static final int DATA_RECEIVER_COUNT = 4;
+    public static final int DATA_SIZE           = 5;
 
-    public static final int CMD_FREQ = 0;
-    public static final int CMD_CHAN = 1;
-    public static final int CMD_LOCK = 2;
+    public static final int CMD_FREQ      = 0;
+    public static final int CMD_CHAN      = 1;
+    public static final int CMD_PRIVATE   = 2;
+    public static final int CMD_EDIT_LOCK = 3;
 
     private final ContainerData data;
     private final ContainerLevelAccess access;
@@ -39,7 +41,8 @@ public class TransmitterMenu extends AbstractContainerMenu {
                 return switch (i) {
                     case DATA_FREQ -> be.frequency();
                     case DATA_CHAN -> be.channel();
-                    case DATA_LOCK -> be.ownerLock() ? 1 : 0;
+                    case DATA_PRIVATE -> be.privateMode() ? 1 : 0;
+                    case DATA_EDIT_LOCK -> be.editLock() ? 1 : 0;
                     case DATA_RECEIVER_COUNT -> be.getLevel() instanceof ServerLevel sl
                         ? PairingRegistry.get(sl).receiverCount(be.pairKey())
                         : 0;
@@ -57,28 +60,39 @@ public class TransmitterMenu extends AbstractContainerMenu {
         this.be = be;
         this.data = data;
         this.access = access;
-
         addDataSlots(data);
     }
 
-    public int frequency()     { return data.get(DATA_FREQ); }
-    public int channel()       { return data.get(DATA_CHAN); }
-    public boolean ownerLock() { return data.get(DATA_LOCK) != 0; }
-    public int receiverCount() { return data.get(DATA_RECEIVER_COUNT); }
+    public int frequency()       { return data.get(DATA_FREQ); }
+    public int channel()         { return data.get(DATA_CHAN); }
+    public boolean privateMode() { return data.get(DATA_PRIVATE) != 0; }
+    public boolean editLock()    { return data.get(DATA_EDIT_LOCK) != 0; }
+    public int receiverCount()   { return data.get(DATA_RECEIVER_COUNT); }
 
-    public static int encodeFreq(int v)     { return (CMD_FREQ << 24) | (v & 0xFFFFFF); }
-    public static int encodeChan(int v)     { return (CMD_CHAN << 24) | (v & 0xFFFFFF); }
-    public static int encodeLock(boolean v) { return (CMD_LOCK << 24) | (v ? 1 : 0); }
+    public static int encodeFreq(int v)         { return (CMD_FREQ << 24)      | (v & 0xFFFFFF); }
+    public static int encodeChan(int v)         { return (CMD_CHAN << 24)      | (v & 0xFFFFFF); }
+    public static int encodePrivate(boolean v)  { return (CMD_PRIVATE << 24)   | (v ? 1 : 0); }
+    public static int encodeEditLock(boolean v) { return (CMD_EDIT_LOCK << 24) | (v ? 1 : 0); }
 
     @Override
     public boolean clickMenuButton(Player player, int id) {
         if (be == null) return false;
         int cmd = (id >>> 24) & 0xFF;
         int value = id & 0xFFFFFF;
+
+        // Edit lock blocks freq/chan/private. Lock toggle itself always allowed.
+        if (be.editLock() && cmd != CMD_EDIT_LOCK) return false;
+
         switch (cmd) {
             case CMD_FREQ -> { be.setFrequency(value); return true; }
             case CMD_CHAN -> { be.setChannel(value); return true; }
-            case CMD_LOCK -> { be.setOwnerLock(value != 0); return true; }
+            case CMD_PRIVATE -> {
+                // TODO v0.2: gate behind a config that requires owner UUID match.
+                // GameRules API moved package + grew an 8-param constructor in 26.1, so deferring.
+                be.setPrivateMode(value != 0);
+                return true;
+            }
+            case CMD_EDIT_LOCK -> { be.setEditLock(value != 0); return true; }
             default -> { return false; }
         }
     }

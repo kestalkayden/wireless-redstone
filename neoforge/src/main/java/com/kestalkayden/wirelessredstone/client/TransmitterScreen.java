@@ -28,24 +28,30 @@ public class TransmitterScreen extends AbstractContainerScreen<TransmitterMenu> 
 
     private static final int CHAN_Y     = 22;
     private static final int FREQ_Y     = 42;
-    private static final int LOCK_Y     = 62;
+    private static final int CHECK_Y    = 62;
     private static final int STATUS_Y   = 80;
 
-    private static final int LOCK_BOX_SIZE  = 10;
-    private static final int LOCK_BOX_Y     = LOCK_Y + 1;
-    private static final int LOCK_LABEL_X   = LABEL_X + LOCK_BOX_SIZE + 4;
+    private static final int CHECK_BOX_SIZE = 10;
+    private static final int CHECK_BOX_Y    = CHECK_Y + 1;
+    private static final int LOCK_BOX_X     = 8;
+    private static final int LOCK_LABEL_X   = LOCK_BOX_X + CHECK_BOX_SIZE + 4;
+    private static final int PRIVATE_BOX_X  = 80;
+    private static final int PRIVATE_LABEL_X = PRIVATE_BOX_X + CHECK_BOX_SIZE + 4;
 
     private EditBox channelField;
     private EditBox frequencyField;
-    private TinyCheckbox lockCheckbox;
+    private Button chanMinus, chanPlus, freqMinus, freqPlus;
+    private TinyCheckbox editLockCheckbox;
+    private TinyCheckbox privateCheckbox;
 
     private Integer pendingChannel = null;
     private Integer pendingFrequency = null;
-    private Boolean pendingLock = null;
+    private Boolean pendingPrivate = null;
+    private Boolean pendingEditLock = null;
 
     public TransmitterScreen(TransmitterMenu menu, Inventory playerInv, Component title) {
         super(menu, playerInv, title, GUI_W, GUI_H);
-        this.inventoryLabelY = -1000;  // no player inv visible; push label off-screen
+        this.inventoryLabelY = -1000;
     }
 
     @Override
@@ -59,10 +65,12 @@ public class TransmitterScreen extends AbstractContainerScreen<TransmitterMenu> 
         channelField.setResponder(this::sendChannel);
         addRenderableWidget(channelField);
 
-        addRenderableWidget(Button.builder(Component.literal("-"), b -> stepChannel(-1))
-            .bounds(leftPos + MINUS_X, topPos + CHAN_Y, BUTTON_W, ROW_H).build());
-        addRenderableWidget(Button.builder(Component.literal("+"), b -> stepChannel(1))
-            .bounds(leftPos + PLUS_X, topPos + CHAN_Y, BUTTON_W, ROW_H).build());
+        chanMinus = Button.builder(Component.literal("-"), b -> stepChannel(-1))
+            .bounds(leftPos + MINUS_X, topPos + CHAN_Y, BUTTON_W, ROW_H).build();
+        addRenderableWidget(chanMinus);
+        chanPlus = Button.builder(Component.literal("+"), b -> stepChannel(1))
+            .bounds(leftPos + PLUS_X, topPos + CHAN_Y, BUTTON_W, ROW_H).build();
+        addRenderableWidget(chanPlus);
 
         frequencyField = new EditBox(font, leftPos + FIELD_X, topPos + FREQ_Y,
             FIELD_W, ROW_H, Component.translatable("gui.wirelessredstone.frequency"));
@@ -71,20 +79,41 @@ public class TransmitterScreen extends AbstractContainerScreen<TransmitterMenu> 
         frequencyField.setResponder(this::sendFrequency);
         addRenderableWidget(frequencyField);
 
-        addRenderableWidget(Button.builder(Component.literal("-"), b -> stepFrequency(-1))
-            .bounds(leftPos + MINUS_X, topPos + FREQ_Y, BUTTON_W, ROW_H).build());
-        addRenderableWidget(Button.builder(Component.literal("+"), b -> stepFrequency(1))
-            .bounds(leftPos + PLUS_X, topPos + FREQ_Y, BUTTON_W, ROW_H).build());
+        freqMinus = Button.builder(Component.literal("-"), b -> stepFrequency(-1))
+            .bounds(leftPos + MINUS_X, topPos + FREQ_Y, BUTTON_W, ROW_H).build();
+        addRenderableWidget(freqMinus);
+        freqPlus = Button.builder(Component.literal("+"), b -> stepFrequency(1))
+            .bounds(leftPos + PLUS_X, topPos + FREQ_Y, BUTTON_W, ROW_H).build();
+        addRenderableWidget(freqPlus);
 
-        lockCheckbox = new TinyCheckbox(leftPos + LABEL_X, topPos + LOCK_BOX_Y,
-            LOCK_BOX_SIZE, menu.ownerLock(), this::sendOwnerLock);
-        addRenderableWidget(lockCheckbox);
+        editLockCheckbox = new TinyCheckbox(leftPos + LOCK_BOX_X, topPos + CHECK_BOX_Y,
+            CHECK_BOX_SIZE, menu.editLock(), this::sendEditLock);
+        addRenderableWidget(editLockCheckbox);
+
+        privateCheckbox = new TinyCheckbox(leftPos + PRIVATE_BOX_X, topPos + CHECK_BOX_Y,
+            CHECK_BOX_SIZE, menu.privateMode(), this::sendPrivate);
+        addRenderableWidget(privateCheckbox);
+
+        applyEditableState();
     }
 
     @Override
     protected void containerTick() {
         super.containerTick();
         syncFromMenu();
+        applyEditableState();
+    }
+
+    private void applyEditableState() {
+        boolean canEdit = !menu.editLock();
+        if (channelField != null)   channelField.setEditable(canEdit);
+        if (frequencyField != null) frequencyField.setEditable(canEdit);
+        if (chanMinus != null)  chanMinus.active = canEdit;
+        if (chanPlus != null)   chanPlus.active = canEdit;
+        if (freqMinus != null)  freqMinus.active = canEdit;
+        if (freqPlus != null)   freqPlus.active = canEdit;
+        if (privateCheckbox != null) privateCheckbox.active = canEdit;
+        // editLockCheckbox is always active so the player can unlock
     }
 
     private void syncFromMenu() {
@@ -106,13 +135,21 @@ public class TransmitterScreen extends AbstractContainerScreen<TransmitterMenu> 
             String s = String.valueOf(server);
             if (!s.equals(frequencyField.getValue())) frequencyField.setValue(s);
         }
-        if (lockCheckbox != null) {
-            boolean server = menu.ownerLock();
-            if (pendingLock != null) {
-                if (server == pendingLock) pendingLock = null;
+        if (privateCheckbox != null) {
+            boolean server = menu.privateMode();
+            if (pendingPrivate != null) {
+                if (server == pendingPrivate) pendingPrivate = null;
                 else return;
             }
-            if (lockCheckbox.isSelected() != server) lockCheckbox.setSelected(server);
+            if (privateCheckbox.isSelected() != server) privateCheckbox.setSelected(server);
+        }
+        if (editLockCheckbox != null) {
+            boolean server = menu.editLock();
+            if (pendingEditLock != null) {
+                if (server == pendingEditLock) pendingEditLock = null;
+                else return;
+            }
+            if (editLockCheckbox.isSelected() != server) editLockCheckbox.setSelected(server);
         }
     }
 
@@ -158,10 +195,16 @@ public class TransmitterScreen extends AbstractContainerScreen<TransmitterMenu> 
         minecraft.gameMode.handleInventoryButtonClick(menu.containerId, TransmitterMenu.encodeFreq(v));
     }
 
-    private void sendOwnerLock(boolean value) {
+    private void sendPrivate(boolean value) {
         if (minecraft == null || minecraft.gameMode == null) return;
-        pendingLock = value;
-        minecraft.gameMode.handleInventoryButtonClick(menu.containerId, TransmitterMenu.encodeLock(value));
+        pendingPrivate = value;
+        minecraft.gameMode.handleInventoryButtonClick(menu.containerId, TransmitterMenu.encodePrivate(value));
+    }
+
+    private void sendEditLock(boolean value) {
+        if (minecraft == null || minecraft.gameMode == null) return;
+        pendingEditLock = value;
+        minecraft.gameMode.handleInventoryButtonClick(menu.containerId, TransmitterMenu.encodeEditLock(value));
     }
 
     @Override
@@ -183,7 +226,9 @@ public class TransmitterScreen extends AbstractContainerScreen<TransmitterMenu> 
         g.text(font, Component.translatable("gui.wirelessredstone.frequency").getString(),
             LABEL_X, FREQ_Y + 3, LABEL_COLOR, false);
         g.text(font, Component.translatable("gui.wirelessredstone.lock").getString(),
-            LOCK_LABEL_X, LOCK_Y + 2, LABEL_COLOR, false);
+            LOCK_LABEL_X, CHECK_Y + 2, LABEL_COLOR, false);
+        g.text(font, Component.translatable("gui.wirelessredstone.private").getString(),
+            PRIVATE_LABEL_X, CHECK_Y + 2, LABEL_COLOR, false);
         g.text(font,
             Component.translatable("gui.wirelessredstone.paired_with", menu.receiverCount()).getString(),
             LABEL_X, STATUS_Y, LABEL_COLOR, false);

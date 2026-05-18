@@ -42,6 +42,6 @@ public final class TransmitterBlocks {
                 .pushReaction(PushReaction.DESTROY)));
 
         TRANSMITTER_ITEM = Registry.register(BuiltInRegistries.ITEM, id,
-            new BlockItem(TRANSMITTER, new Item.Properties().setId(itemKey).useBlockDescriptionPrefix()));
+            new TransmitterItem(TRANSMITTER, new Item.Properties().setId(itemKey).useBlockDescriptionPrefix()));
     }
 }

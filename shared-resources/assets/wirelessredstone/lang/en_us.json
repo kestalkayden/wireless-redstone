@@ -4,6 +4,11 @@
   "gui.wirelessredstone.frequency": "Frequency:",
   "gui.wirelessredstone.channel": "Channel:",
   "gui.wirelessredstone.lock": "Lock",
+  "gui.wirelessredstone.private": "Private",
   "gui.wirelessredstone.paired_with": "Paired: %s receivers",
-  "gui.wirelessredstone.receiving_from": "Receiving from %s @ %s"
+  "gui.wirelessredstone.receiving_from": "Receiving from %s @ %s",
+  "tooltip.wirelessredstone.channel": "Channel: %s",
+  "tooltip.wirelessredstone.frequency": "Frequency: %s",
+  "tooltip.wirelessredstone.private": "Private",
+  "tooltip.wirelessredstone.locked": "Locked"
 }

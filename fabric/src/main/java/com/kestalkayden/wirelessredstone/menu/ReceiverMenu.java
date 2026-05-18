@@ -16,14 +16,16 @@ public class ReceiverMenu extends AbstractContainerMenu {
 
     public static final int DATA_FREQ              = 0;
     public static final int DATA_CHAN              = 1;
-    public static final int DATA_LOCK              = 2;
-    public static final int DATA_TRANSMITTER_COUNT = 3;
-    public static final int DATA_STRENGTH          = 4;
-    public static final int DATA_SIZE              = 5;
+    public static final int DATA_PRIVATE           = 2;
+    public static final int DATA_EDIT_LOCK         = 3;
+    public static final int DATA_TRANSMITTER_COUNT = 4;
+    public static final int DATA_STRENGTH          = 5;
+    public static final int DATA_SIZE              = 6;
 
-    public static final int CMD_FREQ = 0;
-    public static final int CMD_CHAN = 1;
-    public static final int CMD_LOCK = 2;
+    public static final int CMD_FREQ      = 0;
+    public static final int CMD_CHAN      = 1;
+    public static final int CMD_PRIVATE   = 2;
+    public static final int CMD_EDIT_LOCK = 3;
 
     private final ContainerData data;
     private final ContainerLevelAccess access;
@@ -40,7 +42,8 @@ public class ReceiverMenu extends AbstractContainerMenu {
                 return switch (i) {
                     case DATA_FREQ -> be.frequency();
                     case DATA_CHAN -> be.channel();
-                    case DATA_LOCK -> be.ownerLock() ? 1 : 0;
+                    case DATA_PRIVATE -> be.privateMode() ? 1 : 0;
+                    case DATA_EDIT_LOCK -> be.editLock() ? 1 : 0;
                     case DATA_TRANSMITTER_COUNT -> be.getLevel() instanceof ServerLevel sl
                         ? PairingRegistry.get(sl).transmitterCount(be.pairKey())
                         : 0;
@@ -64,23 +67,33 @@ public class ReceiverMenu extends AbstractContainerMenu {
 
     public int frequency()        { return data.get(DATA_FREQ); }
     public int channel()          { return data.get(DATA_CHAN); }
-    public boolean ownerLock()    { return data.get(DATA_LOCK) != 0; }
+    public boolean privateMode()  { return data.get(DATA_PRIVATE) != 0; }
+    public boolean editLock()     { return data.get(DATA_EDIT_LOCK) != 0; }
     public int transmitterCount() { return data.get(DATA_TRANSMITTER_COUNT); }
     public int strength()         { return data.get(DATA_STRENGTH); }
 
-    public static int encodeFreq(int v)     { return (CMD_FREQ << 24) | (v & 0xFFFFFF); }
-    public static int encodeChan(int v)     { return (CMD_CHAN << 24) | (v & 0xFFFFFF); }
-    public static int encodeLock(boolean v) { return (CMD_LOCK << 24) | (v ? 1 : 0); }
+    public static int encodeFreq(int v)         { return (CMD_FREQ << 24)      | (v & 0xFFFFFF); }
+    public static int encodeChan(int v)         { return (CMD_CHAN << 24)      | (v & 0xFFFFFF); }
+    public static int encodePrivate(boolean v)  { return (CMD_PRIVATE << 24)   | (v ? 1 : 0); }
+    public static int encodeEditLock(boolean v) { return (CMD_EDIT_LOCK << 24) | (v ? 1 : 0); }
 
     @Override
     public boolean clickMenuButton(Player player, int id) {
         if (be == null) return false;
         int cmd = (id >>> 24) & 0xFF;
         int value = id & 0xFFFFFF;
+
+        if (be.editLock() && cmd != CMD_EDIT_LOCK) return false;
+
         switch (cmd) {
             case CMD_FREQ -> { be.setFrequency(value); return true; }
             case CMD_CHAN -> { be.setChannel(value); return true; }
-            case CMD_LOCK -> { be.setOwnerLock(value != 0); return true; }
+            case CMD_PRIVATE -> {
+                // TODO v0.2: gate behind a config that requires owner UUID match.
+                be.setPrivateMode(value != 0);
+                return true;
+            }
+            case CMD_EDIT_LOCK -> { be.setEditLock(value != 0); return true; }
             default -> { return false; }
         }
     }

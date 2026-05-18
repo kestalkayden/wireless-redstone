@@ -33,7 +33,8 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
     private int frequency = 0;
     private int channel = 1;
     private UUID ownerUuid = null;
-    private boolean ownerLock = false;
+    private boolean privateMode = false;
+    private boolean editLock = false;
     private SourceMode sourceMode = SourceMode.ECHO;
     private int fixedStrength = 15;
 
@@ -45,7 +46,7 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
 
     @Override
     public PairKey pairKey() {
-        OwnerKey owner = ownerLock && ownerUuid != null
+        OwnerKey owner = privateMode && ownerUuid != null
             ? new OwnerKey.Owned(ownerUuid)
             : OwnerKey.PUBLIC;
         return new PairKey(frequency, channel, owner);
@@ -67,7 +68,8 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
     public int frequency() { return frequency; }
     public int channel() { return channel; }
     public UUID ownerUuid() { return ownerUuid; }
-    public boolean ownerLock() { return ownerLock; }
+    public boolean privateMode() { return privateMode; }
+    public boolean editLock() { return editLock; }
     public SourceMode sourceMode() { return sourceMode; }
     public int fixedStrength() { return fixedStrength; }
 
@@ -98,11 +100,17 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
         setChanged();
     }
 
-    public void setOwnerLock(boolean ownerLock) {
-        if (this.ownerLock == ownerLock) return;
+    public void setPrivateMode(boolean privateMode) {
+        if (this.privateMode == privateMode) return;
         PairKey oldKey = pairKey();
-        this.ownerLock = ownerLock;
+        this.privateMode = privateMode;
         rebindIfChanged(oldKey, pairKey());
+        setChanged();
+    }
+
+    public void setEditLock(boolean editLock) {
+        if (this.editLock == editLock) return;
+        this.editLock = editLock;
         setChanged();
     }
 
@@ -187,7 +195,8 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
         super.saveAdditional(output);
         output.putInt("Frequency", frequency);
         output.putInt("Channel", channel);
-        output.putBoolean("OwnerLock", ownerLock);
+        output.putBoolean("PrivateMode", privateMode);
+        output.putBoolean("EditLock", editLock);
         output.putString("SourceMode", sourceMode.getSerializedName());
         output.putInt("FixedStrength", fixedStrength);
         if (ownerUuid != null) {
@@ -201,7 +210,8 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
         super.loadAdditional(input);
         this.frequency = input.getIntOr("Frequency", 0);
         this.channel = input.getIntOr("Channel", 1);
-        this.ownerLock = input.getBooleanOr("OwnerLock", false);
+        this.privateMode = input.getBooleanOr("PrivateMode", false);
+        this.editLock = input.getBooleanOr("EditLock", false);
         String modeName = input.getStringOr("SourceMode", SourceMode.ECHO.getSerializedName());
         this.sourceMode = modeName.equals(SourceMode.FIXED.getSerializedName()) ? SourceMode.FIXED : SourceMode.ECHO;
         this.fixedStrength = input.getIntOr("FixedStrength", 15);
@@ -214,7 +224,7 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
     protected void collectImplicitComponents(DataComponentMap.Builder components) {
         super.collectImplicitComponents(components);
         components.set(TransmitterComponents.TRANSMITTER_CONFIG(),
-            new TransmitterConfig(frequency, channel, ownerLock, sourceMode, fixedStrength));
+            new TransmitterConfig(frequency, channel, privateMode, editLock, sourceMode, fixedStrength));
     }
 
     @Override
@@ -224,7 +234,8 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
             TransmitterComponents.TRANSMITTER_CONFIG(), TransmitterConfig.DEFAULT);
         this.frequency = config.frequency();
         this.channel = config.channel();
-        this.ownerLock = config.ownerLock();
+        this.privateMode = config.privateMode();
+        this.editLock = config.editLock();
         this.sourceMode = config.sourceMode();
         this.fixedStrength = config.fixedStrength();
     }

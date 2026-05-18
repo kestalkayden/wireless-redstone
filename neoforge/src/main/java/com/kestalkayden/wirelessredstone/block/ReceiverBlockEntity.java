@@ -32,7 +32,8 @@ public class ReceiverBlockEntity extends BlockEntity implements WirelessNode.Rec
     private int frequency = 0;
     private int channel = 1;
     private UUID ownerUuid = null;
-    private boolean ownerLock = false;
+    private boolean privateMode = false;
+    private boolean editLock = false;
 
     private int currentStrength = 0;
 
@@ -42,7 +43,7 @@ public class ReceiverBlockEntity extends BlockEntity implements WirelessNode.Rec
 
     @Override
     public PairKey pairKey() {
-        OwnerKey owner = ownerLock && ownerUuid != null
+        OwnerKey owner = privateMode && ownerUuid != null
             ? new OwnerKey.Owned(ownerUuid)
             : OwnerKey.PUBLIC;
         return new PairKey(frequency, channel, owner);
@@ -58,7 +59,8 @@ public class ReceiverBlockEntity extends BlockEntity implements WirelessNode.Rec
     public int frequency()     { return frequency; }
     public int channel()       { return channel; }
     public UUID ownerUuid()    { return ownerUuid; }
-    public boolean ownerLock() { return ownerLock; }
+    public boolean privateMode() { return privateMode; }
+    public boolean editLock() { return editLock; }
 
     public void setOwner(UUID owner) {
         if (java.util.Objects.equals(this.ownerUuid, owner)) return;
@@ -86,11 +88,17 @@ public class ReceiverBlockEntity extends BlockEntity implements WirelessNode.Rec
         setChanged();
     }
 
-    public void setOwnerLock(boolean ownerLock) {
-        if (this.ownerLock == ownerLock) return;
+    public void setPrivateMode(boolean privateMode) {
+        if (this.privateMode == privateMode) return;
         PairKey oldKey = pairKey();
-        this.ownerLock = ownerLock;
+        this.privateMode = privateMode;
         rebindIfChanged(oldKey, pairKey());
+        setChanged();
+    }
+
+    public void setEditLock(boolean editLock) {
+        if (this.editLock == editLock) return;
+        this.editLock = editLock;
         setChanged();
     }
 
@@ -137,7 +145,8 @@ public class ReceiverBlockEntity extends BlockEntity implements WirelessNode.Rec
         super.saveAdditional(output);
         output.putInt("Frequency", frequency);
         output.putInt("Channel", channel);
-        output.putBoolean("OwnerLock", ownerLock);
+        output.putBoolean("PrivateMode", privateMode);
+        output.putBoolean("EditLock", editLock);
         if (ownerUuid != null) {
             output.putLong("OwnerMost", ownerUuid.getMostSignificantBits());
             output.putLong("OwnerLeast", ownerUuid.getLeastSignificantBits());
@@ -149,7 +158,8 @@ public class ReceiverBlockEntity extends BlockEntity implements WirelessNode.Rec
         super.loadAdditional(input);
         this.frequency = input.getIntOr("Frequency", 0);
         this.channel = input.getIntOr("Channel", 1);
-        this.ownerLock = input.getBooleanOr("OwnerLock", false);
+        this.privateMode = input.getBooleanOr("PrivateMode", false);
+        this.editLock = input.getBooleanOr("EditLock", false);
         long most = input.getLongOr("OwnerMost", 0L);
         long least = input.getLongOr("OwnerLeast", 0L);
         this.ownerUuid = (most == 0L && least == 0L) ? null : new UUID(most, least);
@@ -159,7 +169,7 @@ public class ReceiverBlockEntity extends BlockEntity implements WirelessNode.Rec
     protected void collectImplicitComponents(DataComponentMap.Builder components) {
         super.collectImplicitComponents(components);
         components.set(ReceiverComponents.RECEIVER_CONFIG(),
-            new ReceiverConfig(frequency, channel, ownerLock));
+            new ReceiverConfig(frequency, channel, privateMode, editLock));
     }
 
     @Override
@@ -169,7 +179,8 @@ public class ReceiverBlockEntity extends BlockEntity implements WirelessNode.Rec
             ReceiverComponents.RECEIVER_CONFIG(), ReceiverConfig.DEFAULT);
         this.frequency = config.frequency();
         this.channel = config.channel();
-        this.ownerLock = config.ownerLock();
+        this.privateMode = config.privateMode();
+        this.editLock = config.editLock();
     }
 
     @Override

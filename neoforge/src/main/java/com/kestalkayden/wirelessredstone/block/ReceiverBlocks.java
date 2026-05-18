@@ -39,7 +39,7 @@ public final class ReceiverBlocks {
 
     public static final DeferredItem<BlockItem> RECEIVER_ITEM = ITEMS.register("receiver", id -> {
         ResourceKey<Item> itemKey = ResourceKey.create(Registries.ITEM, id);
-        return new BlockItem(RECEIVER.get(),
+        return new ReceiverItem(RECEIVER.get(),
             new Item.Properties().setId(itemKey).useBlockDescriptionPrefix());
     });
 

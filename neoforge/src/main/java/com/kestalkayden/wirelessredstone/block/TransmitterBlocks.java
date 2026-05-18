@@ -39,7 +39,7 @@ public final class TransmitterBlocks {
 
     public static final DeferredItem<BlockItem> TRANSMITTER_ITEM = ITEMS.register("transmitter", id -> {
         ResourceKey<Item> itemKey = ResourceKey.create(Registries.ITEM, id);
-        return new BlockItem(TRANSMITTER.get(),
+        return new TransmitterItem(TRANSMITTER.get(),
             new Item.Properties().setId(itemKey).useBlockDescriptionPrefix());
     });
 
