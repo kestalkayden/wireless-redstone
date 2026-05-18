@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "pattern": [
+    " T ",
+    "IEI",
+    "RRR"
+  ],
+  "key": {
+    "T": "minecraft:redstone_torch",
+    "I": "minecraft:iron_ingot",
+    "E": "minecraft:ender_pearl",
+    "R": "minecraft:redstone"
+  },
+  "result": {
+    "id": "wirelessredstone:receiver",
+    "count": 1
+  }
+}

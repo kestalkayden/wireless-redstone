@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "pattern": [
+    "RRR",
+    "IEI",
+    "IBI"
+  ],
+  "key": {
+    "R": "minecraft:redstone",
+    "I": "minecraft:iron_ingot",
+    "E": "minecraft:ender_pearl",
+    "B": "minecraft:redstone_block"
+  },
+  "result": {
+    "id": "wirelessredstone:transmitter",
+    "count": 1
+  }
+}
