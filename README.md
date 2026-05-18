@@ -10,7 +10,8 @@ Wireless redstone transmitters and receivers for Minecraft 26.1.x. Pair them by 
 
 ## Downloads
 
-Coming soon to Modrinth and CurseForge.
+- Modrinth: <https://modrinth.com/mod/wireless-redstone-lite>
+- CurseForge: <https://www.curseforge.com/minecraft/mc-mods/wireless-redstone-lite>
 
 ## What's in it
 
@@ -20,6 +21,7 @@ Coming soon to Modrinth and CurseForge.
 - **Lock** toggle — freezes the channel/frequency so you can't bump them while sneak-clicking.
 - **Private** toggle — binds the pair to your player UUID, so two players can use the same channel without crossing wires.
 - **Item tooltips** show channel/frequency/lock/private state without placing the block.
+- **Jade compat** — install [Jade](https://modrinth.com/mod/jade) for in-world tooltips showing channel, frequency, lock, private, and manual mode when you point at a placed block. Optional; mod works fine without it.
 
 ## How it works
 
@@ -30,6 +32,8 @@ Coming soon to Modrinth and CurseForge.
 5. The receiver mirrors whatever signal strength the transmitter sees.
 
 Multiple transmitters on the same channel? The receiver outputs the strongest. Multiple receivers? They all output the same strength. No cross-dimension signalling.
+
+**Manual override**: sneak-right-click a transmitter to cycle between **Toggle** (default; responds to redstone input), **Always On** (broadcasts full signal regardless of input), and **Always Off** (broadcasts nothing). Use Always On as a wireless lever, Always Off as a quick kill switch.
 
 ## Recipes
 
