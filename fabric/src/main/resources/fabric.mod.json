@@ -16,6 +16,9 @@
   "entrypoints": {
     "main": [
       "com.kestalkayden.wirelessredstone.WirelessRedstoneFabric"
+    ],
+    "client": [
+      "com.kestalkayden.wirelessredstone.client.WirelessRedstoneClient"
     ]
   },
   "depends": {

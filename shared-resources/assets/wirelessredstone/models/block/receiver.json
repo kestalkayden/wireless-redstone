@@ -1,0 +1,23 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": {
+    "particle": "minecraft:block/polished_andesite",
+    "wifi":     "minecraft:block/diamond_block",
+    "edge":     "minecraft:block/polished_andesite",
+    "back":     "minecraft:block/polished_andesite"
+  },
+  "elements": [
+    {
+      "from": [1, 0, 1],
+      "to":   [15, 2, 15],
+      "faces": {
+        "up":    { "texture": "#wifi" },
+        "down":  { "texture": "#back" },
+        "north": { "texture": "#edge" },
+        "south": { "texture": "#edge" },
+        "east":  { "texture": "#edge" },
+        "west":  { "texture": "#edge" }
+      }
+    }
+  ]
+}
