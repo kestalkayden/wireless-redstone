@@ -7,6 +7,10 @@ base {
     archivesName = "${project.archives_base_name}-neoforge"
 }
 
+repositories {
+    maven { url = "https://api.modrinth.com/maven" }
+}
+
 neoForge {
     version = neoforge_version
     validateAccessTransformers = false
@@ -22,6 +26,12 @@ neoForge {
         server { server() }
         data { data() }
     }
+}
+
+dependencies {
+    // Jade — optional dep, plugin provides in-world tooltips. compileOnly so we don't
+    // bundle it; users install Jade separately if they want the tooltips.
+    compileOnly "maven.modrinth:jade:${jade_neoforge_version}"
 }
 
 processResources {

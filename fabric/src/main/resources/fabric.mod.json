@@ -19,6 +19,9 @@
     ],
     "client": [
       "com.kestalkayden.wirelessredstone.client.WirelessRedstoneClient"
+    ],
+    "jade": [
+      "com.kestalkayden.wirelessredstone.jade.WirelessRedstoneJadePlugin"
     ]
   },
   "depends": {

@@ -13,9 +13,14 @@ import com.kestalkayden.wirelessredstone.pairing.WirelessNode;
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
@@ -70,6 +75,7 @@ public class ReceiverBlockEntity extends BlockEntity implements WirelessNode.Rec
         this.ownerUuid = owner;
         rebindIfChanged(oldKey, pairKey());
         setChanged();
+        syncClient();
     }
 
     public void setFrequency(int frequency) {
@@ -79,6 +85,7 @@ public class ReceiverBlockEntity extends BlockEntity implements WirelessNode.Rec
         this.frequency = clamped;
         rebindIfChanged(oldKey, pairKey());
         setChanged();
+        syncClient();
     }
 
     public void setChannel(int channel) {
@@ -88,6 +95,7 @@ public class ReceiverBlockEntity extends BlockEntity implements WirelessNode.Rec
         this.channel = clamped;
         rebindIfChanged(oldKey, pairKey());
         setChanged();
+        syncClient();
     }
 
     public void setPrivateMode(boolean privateMode) {
@@ -96,12 +104,32 @@ public class ReceiverBlockEntity extends BlockEntity implements WirelessNode.Rec
         this.privateMode = privateMode;
         rebindIfChanged(oldKey, pairKey());
         setChanged();
+        syncClient();
     }
 
     public void setEditLock(boolean editLock) {
         if (this.editLock == editLock) return;
         this.editLock = editLock;
         setChanged();
+        syncClient();
+    }
+
+    /** Broadcasts BE NBT to clients so they see config changes (channel, freq,
+     *  lock, private). Called from setters after field updates. */
+    private void syncClient() {
+        if (level == null || level.isClientSide()) return;
+        BlockState state = getBlockState();
+        level.sendBlockUpdated(worldPosition, state, state, Block.UPDATE_CLIENTS);
+    }
+
+    @Override
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        return saveCustomOnly(registries);
     }
 
     @Override

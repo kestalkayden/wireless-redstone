@@ -11,6 +11,7 @@
   "tooltip.wirelessredstone.frequency": "Frequency: %s",
   "tooltip.wirelessredstone.private": "Private",
   "tooltip.wirelessredstone.locked": "Locked",
+  "tooltip.wirelessredstone.receiving": "Receiving signal",
   "tooltip.wirelessredstone.manual_mode.always_on": "Always On",
   "tooltip.wirelessredstone.manual_mode.always_off": "Always Off",
   "message.wirelessredstone.manual_mode.toggle": "Transmitter: Toggle (redstone-controlled)",
