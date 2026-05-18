@@ -8,12 +8,14 @@ import org.slf4j.LoggerFactory;
 
 import com.kestalkayden.wirelessredstone.block.ReceiverBlockEntities;
 import com.kestalkayden.wirelessredstone.block.ReceiverBlocks;
+import com.kestalkayden.wirelessredstone.block.TransmitterBlock;
 import com.kestalkayden.wirelessredstone.block.TransmitterBlockEntities;
 import com.kestalkayden.wirelessredstone.block.TransmitterBlocks;
 import com.kestalkayden.wirelessredstone.client.ReceiverScreen;
 import com.kestalkayden.wirelessredstone.client.TransmitterScreen;
 import com.kestalkayden.wirelessredstone.component.ReceiverComponents;
 import com.kestalkayden.wirelessredstone.component.TransmitterComponents;
+import com.kestalkayden.wirelessredstone.config.ModConfig;
 import com.kestalkayden.wirelessredstone.menu.ReceiverMenus;
 import com.kestalkayden.wirelessredstone.menu.TransmitterMenus;
 import com.kestalkayden.wirelessredstone.pairing.PairingRegistry;
@@ -27,9 +29,11 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
@@ -47,6 +51,8 @@ public class WirelessRedstoneNeoForge {
     public WirelessRedstoneNeoForge(IEventBus modBus) {
         LOGGER.info("Initializing Wireless Redstone (NeoForge)");
 
+        ModConfig.load(FMLPaths.CONFIGDIR.get());
+
         TransmitterBlocks.BLOCKS.register(modBus);
         TransmitterBlocks.ITEMS.register(modBus);
         ReceiverBlocks.BLOCKS.register(modBus);
@@ -60,6 +66,7 @@ public class WirelessRedstoneNeoForge {
 
         NeoForge.EVENT_BUS.addListener(WirelessRedstoneNeoForge::onLevelUnload);
         NeoForge.EVENT_BUS.addListener(WirelessRedstoneNeoForge::onServerTickPost);
+        NeoForge.EVENT_BUS.addListener(WirelessRedstoneNeoForge::onRightClickBlock);
         modBus.addListener(WirelessRedstoneNeoForge::onBuildCreativeTabs);
 
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
@@ -87,6 +94,16 @@ public class WirelessRedstoneNeoForge {
                 LOGGER.error("Pending tick init failed", e);
             }
         }
+    }
+
+    /** Sneak-right-click on a transmitter cycles its ManualMode. We hook this event
+     *  because vanilla's game mode skips block interactions entirely when the player
+     *  sneaks with an item in hand. */
+    private static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
+        if (!event.getEntity().isShiftKeyDown()) return;
+        if (!(event.getLevel().getBlockState(event.getPos()).getBlock() instanceof TransmitterBlock)) return;
+        event.setCanceled(true);
+        event.setCancellationResult(TransmitterBlock.onSneakRightClick(event.getLevel(), event.getPos(), event.getEntity()));
     }
 
     private static void onBuildCreativeTabs(BuildCreativeModeTabContentsEvent event) {

@@ -9,11 +9,13 @@ import org.slf4j.LoggerFactory;
 import com.kestalkayden.wirelessredstone.block.ReceiverBlockEntities;
 import com.kestalkayden.wirelessredstone.block.ReceiverBlockEntity;
 import com.kestalkayden.wirelessredstone.block.ReceiverBlocks;
+import com.kestalkayden.wirelessredstone.block.TransmitterBlock;
 import com.kestalkayden.wirelessredstone.block.TransmitterBlockEntities;
 import com.kestalkayden.wirelessredstone.block.TransmitterBlockEntity;
 import com.kestalkayden.wirelessredstone.block.TransmitterBlocks;
 import com.kestalkayden.wirelessredstone.component.ReceiverComponents;
 import com.kestalkayden.wirelessredstone.component.TransmitterComponents;
+import com.kestalkayden.wirelessredstone.config.ModConfig;
 import com.kestalkayden.wirelessredstone.menu.ReceiverMenus;
 import com.kestalkayden.wirelessredstone.menu.TransmitterMenus;
 import com.kestalkayden.wirelessredstone.pairing.PairingRegistry;
@@ -23,6 +25,9 @@ import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerBlockEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLevelEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Items;
 
@@ -40,6 +45,8 @@ public class WirelessRedstoneFabric implements ModInitializer {
     @Override
     public void onInitialize() {
         LOGGER.info("Initializing Wireless Redstone (Fabric)");
+
+        ModConfig.load(FabricLoader.getInstance().getConfigDir());
 
         TransmitterBlocks.register();
         ReceiverBlocks.register();
@@ -66,6 +73,15 @@ public class WirelessRedstoneFabric implements ModInitializer {
                     LOGGER.error("Pending tick init failed", e);
                 }
             }
+        });
+
+        // Sneak-right-click on a transmitter cycles its ManualMode. We register at the
+        // UseBlockCallback level because vanilla's game mode skips block interactions
+        // entirely when the player sneaks with an item in hand.
+        UseBlockCallback.EVENT.register((player, world, hand, hit) -> {
+            if (!player.isShiftKeyDown()) return InteractionResult.PASS;
+            if (!(world.getBlockState(hit.getBlockPos()).getBlock() instanceof TransmitterBlock)) return InteractionResult.PASS;
+            return TransmitterBlock.onSneakRightClick(world, hit.getBlockPos(), player);
         });
 
         CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.REDSTONE_BLOCKS).register(output -> {

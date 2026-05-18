@@ -11,6 +11,15 @@ public interface WirelessNode {
     }
 
     interface Receiver extends WirelessNode {
-        void onExternalStrengthChanged(int newStrength);
+        /** Update internal strength + visual POWERED state. Does NOT fire neighbor
+         *  updates — that's split into {@link #notifyNeighbors()} so the registry
+         *  can update all receivers' state before firing any neighbor wave.
+         *  This avoids stale weak-power propagation through redstone-conductor
+         *  neighbors (e.g., adjacent lamps reading each other) during iteration. */
+        void setStrengthSilent(int newStrength);
+
+        /** Fire vanilla neighbor updates so downstream redstone re-evaluates. Called
+         *  after all receivers have had {@link #setStrengthSilent} applied. */
+        void notifyNeighbors();
     }
 }

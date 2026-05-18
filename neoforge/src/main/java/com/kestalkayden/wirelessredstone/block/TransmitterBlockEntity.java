@@ -2,6 +2,7 @@ package com.kestalkayden.wirelessredstone.block;
 
 import java.util.UUID;
 
+import com.kestalkayden.wirelessredstone.component.ManualMode;
 import com.kestalkayden.wirelessredstone.component.SourceMode;
 import com.kestalkayden.wirelessredstone.component.TransmitterComponents;
 import com.kestalkayden.wirelessredstone.component.TransmitterConfig;
@@ -38,6 +39,7 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
     private boolean editLock = false;
     private SourceMode sourceMode = SourceMode.ECHO;
     private int fixedStrength = 15;
+    private ManualMode manualMode = ManualMode.TOGGLE;
 
     private int lastInputStrength = 0;
 
@@ -60,9 +62,13 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
 
     @Override
     public int currentStrength() {
-        return switch (sourceMode) {
-            case ECHO -> lastInputStrength;
-            case FIXED -> lastInputStrength > 0 ? fixedStrength : 0;
+        return switch (manualMode) {
+            case ALWAYS_OFF -> 0;
+            case ALWAYS_ON -> 15;
+            case TOGGLE -> switch (sourceMode) {
+                case ECHO -> lastInputStrength;
+                case FIXED -> lastInputStrength > 0 ? fixedStrength : 0;
+            };
         };
     }
 
@@ -73,6 +79,7 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
     public boolean editLock() { return editLock; }
     public SourceMode sourceMode() { return sourceMode; }
     public int fixedStrength() { return fixedStrength; }
+    public ManualMode manualMode() { return manualMode; }
 
     public void setOwner(UUID owner) {
         if (java.util.Objects.equals(this.ownerUuid, owner)) return;
@@ -128,6 +135,14 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
         this.fixedStrength = clamped;
         if (sourceMode == SourceMode.FIXED) notifyCurrentKey();
         setChanged();
+    }
+
+    /** Bumps manualMode to the next state and broadcasts the change. Returns the new mode. */
+    public ManualMode cycleManualMode() {
+        this.manualMode = manualMode.next();
+        notifyCurrentKey();
+        setChanged();
+        return this.manualMode;
     }
 
     @Override
@@ -211,7 +226,12 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
             PairKey key = pairKey();
             PairingRegistry registry = PairingRegistry.get(sl);
             registry.removeTransmitter(key, this);
-            registry.notifyTransmitterChanged(key);
+            // Skip neighbor notify during shutdown / chunk-unload teardown — calling
+            // updateNeighborsAt during chunk clearing hangs the shutdown. Receivers
+            // re-sync from the registry on next load via currentStrengthFor.
+            if (sl.getServer() != null && sl.getServer().isRunning()) {
+                registry.notifyTransmitterChanged(key);
+            }
         }
         super.setRemoved();
     }
@@ -225,6 +245,7 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
         output.putBoolean("EditLock", editLock);
         output.putString("SourceMode", sourceMode.getSerializedName());
         output.putInt("FixedStrength", fixedStrength);
+        output.putString("ManualMode", manualMode.getSerializedName());
         if (ownerUuid != null) {
             output.putLong("OwnerMost", ownerUuid.getMostSignificantBits());
             output.putLong("OwnerLeast", ownerUuid.getLeastSignificantBits());
@@ -241,6 +262,7 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
         String modeName = input.getStringOr("SourceMode", SourceMode.ECHO.getSerializedName());
         this.sourceMode = modeName.equals(SourceMode.FIXED.getSerializedName()) ? SourceMode.FIXED : SourceMode.ECHO;
         this.fixedStrength = input.getIntOr("FixedStrength", 15);
+        this.manualMode = ManualMode.fromName(input.getStringOr("ManualMode", ManualMode.TOGGLE.getSerializedName()));
         long most = input.getLongOr("OwnerMost", 0L);
         long least = input.getLongOr("OwnerLeast", 0L);
         this.ownerUuid = (most == 0L && least == 0L) ? null : new UUID(most, least);
@@ -250,7 +272,7 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
     protected void collectImplicitComponents(DataComponentMap.Builder components) {
         super.collectImplicitComponents(components);
         components.set(TransmitterComponents.TRANSMITTER_CONFIG(),
-            new TransmitterConfig(frequency, channel, privateMode, editLock, sourceMode, fixedStrength));
+            new TransmitterConfig(frequency, channel, privateMode, editLock, sourceMode, fixedStrength, manualMode));
     }
 
     @Override
@@ -264,5 +286,6 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
         this.editLock = config.editLock();
         this.sourceMode = config.sourceMode();
         this.fixedStrength = config.fixedStrength();
+        this.manualMode = config.manualMode();
     }
 }

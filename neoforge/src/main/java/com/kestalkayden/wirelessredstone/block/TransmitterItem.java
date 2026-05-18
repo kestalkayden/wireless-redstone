@@ -2,6 +2,7 @@ package com.kestalkayden.wirelessredstone.block;
 
 import java.util.function.Consumer;
 
+import com.kestalkayden.wirelessredstone.component.ManualMode;
 import com.kestalkayden.wirelessredstone.component.TransmitterComponents;
 import com.kestalkayden.wirelessredstone.component.TransmitterConfig;
 
@@ -37,6 +38,11 @@ public class TransmitterItem extends BlockItem {
         if (config.editLock()) {
             tooltip.accept(Component.translatable("tooltip.wirelessredstone.locked")
                 .withStyle(ChatFormatting.YELLOW));
+        }
+        if (config.manualMode() != ManualMode.TOGGLE) {
+            tooltip.accept(Component.translatable(
+                    "tooltip.wirelessredstone.manual_mode." + config.manualMode().getSerializedName())
+                .withStyle(config.manualMode() == ManualMode.ALWAYS_ON ? ChatFormatting.AQUA : ChatFormatting.DARK_GRAY));
         }
     }
 }

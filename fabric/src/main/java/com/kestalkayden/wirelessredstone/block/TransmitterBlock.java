@@ -1,12 +1,16 @@
 package com.kestalkayden.wirelessredstone.block;
 
+import com.kestalkayden.wirelessredstone.component.ManualMode;
 import com.mojang.serialization.MapCodec;
 
 import java.util.Map;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
@@ -130,6 +134,21 @@ public class TransmitterBlock extends BaseEntityBlock {
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof TransmitterBlockEntity be) {
             player.openMenu(be);
+        }
+        return InteractionResult.SUCCESS;
+    }
+
+    /** Sneak-right-click cycles ManualMode. Wired in via UseBlockCallback / NeoForge
+     *  RightClickBlock event from the entrypoint, because vanilla's game mode skips
+     *  block interaction entirely when sneaking with an item in hand. */
+    public static InteractionResult onSneakRightClick(Level level, BlockPos pos, Player player) {
+        if (!(level.getBlockEntity(pos) instanceof TransmitterBlockEntity be)) return InteractionResult.PASS;
+        if (!level.isClientSide()) {
+            ManualMode mode = be.cycleManualMode();
+            if (player instanceof ServerPlayer sp) {
+                sp.connection.send(new ClientboundSetActionBarTextPacket(
+                    Component.translatable("message.wirelessredstone.manual_mode." + mode.getSerializedName())));
+            }
         }
         return InteractionResult.SUCCESS;
     }

@@ -25,6 +25,7 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.redstone.ExperimentalRedstoneUtils;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
@@ -104,13 +105,27 @@ public class ReceiverBlockEntity extends BlockEntity implements WirelessNode.Rec
     }
 
     @Override
-    public void onExternalStrengthChanged(int newStrength) {
+    public void setStrengthSilent(int newStrength) {
         if (this.currentStrength == newStrength) return;
         this.currentStrength = newStrength;
-        if (level != null && !level.isClientSide()) {
-            level.updateNeighborsAt(worldPosition, getBlockState().getBlock());
+        // Update POWERED visual via UPDATE_CLIENTS only — neighbor wave is deferred
+        // to notifyNeighbors() so the registry can update all receivers first.
+        if (level == null || level.isClientSide()) return;
+        BlockState state = getBlockState();
+        if (!state.hasProperty(ReceiverBlock.POWERED)) return;
+        boolean nowPowered = newStrength > 0;
+        if (state.getValue(ReceiverBlock.POWERED) != nowPowered) {
+            level.setBlock(worldPosition,
+                state.setValue(ReceiverBlock.POWERED, nowPowered),
+                Block.UPDATE_CLIENTS);
         }
-        updatePoweredState();
+    }
+
+    @Override
+    public void notifyNeighbors() {
+        if (!(level instanceof ServerLevel sl)) return;
+        sl.updateNeighborsAt(worldPosition, getBlockState().getBlock(),
+            ExperimentalRedstoneUtils.initialOrientation(sl, null, null));
     }
 
     private void updatePoweredState() {
@@ -131,7 +146,8 @@ public class ReceiverBlockEntity extends BlockEntity implements WirelessNode.Rec
             PairingRegistry registry = PairingRegistry.get(sl);
             registry.removeReceiver(oldKey, this);
             registry.addReceiver(newKey, this);
-            onExternalStrengthChanged(registry.currentStrength(newKey));
+            setStrengthSilent(registry.currentStrengthFor(newKey, worldPosition));
+            notifyNeighbors();
         }
     }
 
@@ -143,7 +159,7 @@ public class ReceiverBlockEntity extends BlockEntity implements WirelessNode.Rec
         registry.addReceiver(pairKey(), this);
         // Sync BE.currentStrength synchronously from the registry — pure BE field access, no
         // chunk queries. Receiver reports correct redstone signal even if chunk is non-ticking.
-        this.currentStrength = registry.currentStrength(pairKey());
+        this.currentStrength = registry.currentStrengthFor(pairKey(), worldPosition);
         // Defer chunk-touchy work (updateNeighborsAt + setBlock) to end of next server tick.
         com.kestalkayden.wirelessredstone.WirelessRedstoneFabric.PENDING_TICK_INITS.add(this::tickInit);
     }
@@ -151,7 +167,8 @@ public class ReceiverBlockEntity extends BlockEntity implements WirelessNode.Rec
     /** Runs from WirelessRedstoneFabric.PENDING_TICK_INITS drain on END_SERVER_TICK. */
     public void tickInit() {
         if (isRemoved() || !(level instanceof ServerLevel sl)) return;
-        sl.updateNeighborsAt(worldPosition, getBlockState().getBlock());
+        sl.updateNeighborsAt(worldPosition, getBlockState().getBlock(),
+            ExperimentalRedstoneUtils.initialOrientation(sl, null, null));
         updatePoweredState();
     }
 
