@@ -23,6 +23,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
@@ -166,15 +167,44 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
         if (level instanceof ServerLevel sl) {
             PairingRegistry.get(sl).notifyTransmitterChanged(pairKey());
         }
+        updatePoweredState();
+    }
+
+    private void updatePoweredState() {
+        if (level == null || level.isClientSide()) return;
+        BlockState state = getBlockState();
+        if (!state.hasProperty(TransmitterBlock.POWERED)) return;
+        boolean nowPowered = currentStrength() > 0;
+        if (state.getValue(TransmitterBlock.POWERED) != nowPowered) {
+            level.setBlock(worldPosition,
+                state.setValue(TransmitterBlock.POWERED, nowPowered),
+                Block.UPDATE_CLIENTS);
+        }
     }
 
     /** Called from the Fabric ServerBlockEntityEvents.BLOCK_ENTITY_LOAD hook in the entrypoint. */
     public void registerInRegistry() {
-        if (level instanceof ServerLevel sl) {
-            PairKey key = pairKey();
-            PairingRegistry registry = PairingRegistry.get(sl);
-            registry.addTransmitter(key, this);
-            registry.notifyTransmitterChanged(key);
+        if (!(level instanceof ServerLevel sl)) return;
+        // Register synchronously so other BEs loading in the same tick see us in the bucket.
+        PairingRegistry.get(sl).addTransmitter(pairKey(), this);
+        // Defer chunk-touchy work to end of next server tick via the shared queue.
+        // Doing it here would deadlock the chunk loader (we're called during chunk load).
+        // server.execute runs inline from server thread; scheduleTick only fires for TICKING
+        // chunks; TickTask(currentTick+1) hangs shutdown. ServerTickEvents.END_SERVER_TICK
+        // is the right hook — fires reliably each tick, doesn't block shutdown.
+        com.kestalkayden.wirelessredstone.WirelessRedstoneFabric.PENDING_TICK_INITS.add(this::tickInit);
+    }
+
+    /** Runs from WirelessRedstoneFabric.PENDING_TICK_INITS drain on END_SERVER_TICK. */
+    public void tickInit() {
+        if (isRemoved() || !(level instanceof ServerLevel sl)) return;
+        int signal = sl.getBestNeighborSignal(worldPosition);
+        if (signal != lastInputStrength) {
+            onRedstoneInputChanged(signal);
+        } else {
+            // Signal unchanged but receivers loaded after us need our current contribution.
+            PairingRegistry.get(sl).notifyTransmitterChanged(pairKey());
+            updatePoweredState();
         }
     }
 

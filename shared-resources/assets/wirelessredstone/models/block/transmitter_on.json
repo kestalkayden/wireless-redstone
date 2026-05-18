@@ -1,0 +1,6 @@
+{
+  "parent": "wirelessredstone:block/transmitter",
+  "textures": {
+    "lcd": "wirelessredstone:block/transmitter_lcd_on"
+  }
+}

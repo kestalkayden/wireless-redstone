@@ -1,0 +1,6 @@
+{
+  "parent": "wirelessredstone:block/receiver",
+  "textures": {
+    "wifi": "wirelessredstone:block/receiver_wifi_on"
+  }
+}

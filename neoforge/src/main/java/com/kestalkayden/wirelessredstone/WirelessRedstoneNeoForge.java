@@ -1,5 +1,8 @@
 package com.kestalkayden.wirelessredstone;
 
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,11 +31,18 @@ import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 @Mod(WirelessRedstoneNeoForge.MOD_ID)
 public class WirelessRedstoneNeoForge {
     public static final String MOD_ID = "wirelessredstone";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+
+    /** Tasks queued from BE.onLoad to run at the end of the next server tick.
+     *  Defers chunk-touchy work out of the chunk-load context without using TickTask
+     *  (blocks shutdown) or scheduleTick (only for ticking chunks). Drained on
+     *  ServerTickEvent.Post; pending tasks at shutdown are simply dropped. */
+    public static final Queue<Runnable> PENDING_TICK_INITS = new ConcurrentLinkedQueue<>();
 
     public WirelessRedstoneNeoForge(IEventBus modBus) {
         LOGGER.info("Initializing Wireless Redstone (NeoForge)");
@@ -49,6 +59,7 @@ public class WirelessRedstoneNeoForge {
         ReceiverMenus.MENUS.register(modBus);
 
         NeoForge.EVENT_BUS.addListener(WirelessRedstoneNeoForge::onLevelUnload);
+        NeoForge.EVENT_BUS.addListener(WirelessRedstoneNeoForge::onServerTickPost);
         modBus.addListener(WirelessRedstoneNeoForge::onBuildCreativeTabs);
 
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
@@ -64,6 +75,17 @@ public class WirelessRedstoneNeoForge {
     private static void onLevelUnload(LevelEvent.Unload event) {
         if (event.getLevel() instanceof ServerLevel serverLevel) {
             PairingRegistry.onLevelUnload(serverLevel);
+        }
+    }
+
+    private static void onServerTickPost(ServerTickEvent.Post event) {
+        Runnable task;
+        while ((task = PENDING_TICK_INITS.poll()) != null) {
+            try {
+                task.run();
+            } catch (Exception e) {
+                LOGGER.error("Pending tick init failed", e);
+            }
         }
     }
 

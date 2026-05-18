@@ -1,10 +1,10 @@
 {
   "parent": "minecraft:block/block",
   "textures": {
-    "particle": "minecraft:block/polished_andesite",
-    "wifi":     "minecraft:block/diamond_block",
-    "edge":     "minecraft:block/polished_andesite",
-    "back":     "minecraft:block/polished_andesite"
+    "particle": "wirelessredstone:block/panel_edge",
+    "wifi":     "wirelessredstone:block/receiver_wifi",
+    "edge":     "wirelessredstone:block/panel_edge",
+    "back":     "wirelessredstone:block/panel_back"
   },
   "elements": [
     {
