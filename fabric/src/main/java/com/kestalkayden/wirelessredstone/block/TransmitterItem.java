@@ -25,6 +25,10 @@ public class TransmitterItem extends BlockItem {
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display,
                                  Consumer<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, display, tooltip, flag);
+        // Subtitle adds "Redstone" to the searchable tooltip text so JEI/REI/EMI
+        // (and vanilla creative with tooltip-search enabled) match a "redstone" query.
+        tooltip.accept(Component.translatable("tooltip.wirelessredstone.subtitle.transmitter")
+            .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
         TransmitterConfig config = stack.get(TransmitterComponents.TRANSMITTER_CONFIG());
         if (config == null) return;
         tooltip.accept(Component.translatable("tooltip.wirelessredstone.channel", config.channel())

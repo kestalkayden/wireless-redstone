@@ -7,6 +7,8 @@
   "gui.wirelessredstone.private": "Private",
   "gui.wirelessredstone.paired_with": "Paired: %s receivers",
   "gui.wirelessredstone.receiving_from": "Receiving from %s @ %s",
+  "tooltip.wirelessredstone.subtitle.transmitter": "Wireless redstone broadcaster",
+  "tooltip.wirelessredstone.subtitle.receiver": "Wireless redstone output",
   "tooltip.wirelessredstone.channel": "Channel: %s",
   "tooltip.wirelessredstone.frequency": "Frequency: %s",
   "tooltip.wirelessredstone.private": "Private",
