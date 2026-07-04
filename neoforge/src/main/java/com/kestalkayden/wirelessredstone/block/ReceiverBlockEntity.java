@@ -165,7 +165,7 @@ public class ReceiverBlockEntity extends BlockEntity implements WirelessNode.Rec
         if (state.getValue(ReceiverBlock.POWERED) != nowPowered) {
             level.setBlock(worldPosition,
                 state.setValue(ReceiverBlock.POWERED, nowPowered),
-                Block.UPDATE_ALL);
+                Block.UPDATE_CLIENTS);
         }
     }
 
