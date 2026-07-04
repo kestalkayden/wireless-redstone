@@ -18,5 +18,6 @@
   "tooltip.wirelessredstone.manual_mode.always_off": "Always Off",
   "message.wirelessredstone.manual_mode.toggle": "Transmitter: Toggle (redstone-controlled)",
   "message.wirelessredstone.manual_mode.always_on": "Transmitter: Always On",
-  "message.wirelessredstone.manual_mode.always_off": "Transmitter: Always Off"
+  "message.wirelessredstone.manual_mode.always_off": "Transmitter: Always Off",
+  "message.wirelessredstone.locked_by_owner": "This block belongs to someone else."
 }

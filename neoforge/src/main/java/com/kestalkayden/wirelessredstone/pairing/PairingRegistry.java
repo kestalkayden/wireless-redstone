@@ -14,8 +14,16 @@ import net.minecraft.server.level.ServerLevel;
 public final class PairingRegistry {
     private static final Map<ServerLevel, PairingRegistry> PER_LEVEL = new IdentityHashMap<>();
 
+    /** Registration path — creates the per-level registry on demand. */
     public static PairingRegistry get(ServerLevel level) {
         return PER_LEVEL.computeIfAbsent(level, l -> new PairingRegistry());
+    }
+
+    /** Removal path — never resurrects a level's registry after {@link #onLevelUnload}.
+     *  BE teardown can run after the level-unload event, so removals must not re-insert a
+     *  now-dead ServerLevel (which would leak it and its whole object graph in PER_LEVEL). */
+    public static PairingRegistry getIfPresent(ServerLevel level) {
+        return PER_LEVEL.get(level);
     }
 
     public static void onLevelUnload(ServerLevel level) {
@@ -54,11 +62,13 @@ public final class PairingRegistry {
         PairBucket b = buckets.get(key);
         if (b == null) return 0;
         ModConfig cfg = ModConfig.get();
-        boolean limited = cfg.rangeLocked;
-        long maxSq = (long) cfg.maxRange * cfg.maxRange;
+        if (!cfg.rangeLocked) return maxStrength(b);
+        return maxStrengthWithin(b, receiverPos, (long) cfg.maxRange * cfg.maxRange);
+    }
+
+    private static int maxStrength(PairBucket b) {
         int max = 0;
         for (WirelessNode.Transmitter tx : b.transmitters) {
-            if (limited && tx.pos().distSqr(receiverPos) > maxSq) continue;
             int s = tx.currentStrength();
             if (s > max) max = s;
             if (max == 15) return 15;
@@ -66,35 +76,77 @@ public final class PairingRegistry {
         return max;
     }
 
-    public int transmitterCount(PairKey key) {
-        PairBucket b = buckets.get(key);
-        return b == null ? 0 : b.transmitters.size();
+    private static int maxStrengthWithin(PairBucket b, BlockPos receiverPos, long maxSq) {
+        int max = 0;
+        for (WirelessNode.Transmitter tx : b.transmitters) {
+            if (tx.pos().distSqr(receiverPos) > maxSq) continue;
+            int s = tx.currentStrength();
+            if (s > max) max = s;
+            if (max == 15) return 15;
+        }
+        return max;
     }
 
-    public int receiverCount(PairKey key) {
+    /** Transmitters on this key that can actually reach {@code near} (range-gated), for GUI. */
+    public int transmitterCount(PairKey key, BlockPos near) {
         PairBucket b = buckets.get(key);
-        return b == null ? 0 : b.receivers.size();
+        if (b == null) return 0;
+        ModConfig cfg = ModConfig.get();
+        if (!cfg.rangeLocked) return b.transmitters.size();
+        long maxSq = (long) cfg.maxRange * cfg.maxRange;
+        int n = 0;
+        for (WirelessNode.Transmitter tx : b.transmitters) {
+            if (tx.pos().distSqr(near) <= maxSq) n++;
+        }
+        return n;
+    }
+
+    /** Receivers on this key that this block can actually reach (range-gated), for GUI. */
+    public int receiverCount(PairKey key, BlockPos near) {
+        PairBucket b = buckets.get(key);
+        if (b == null) return 0;
+        ModConfig cfg = ModConfig.get();
+        if (!cfg.rangeLocked) return b.receivers.size();
+        long maxSq = (long) cfg.maxRange * cfg.maxRange;
+        int n = 0;
+        for (WirelessNode.Receiver rx : b.receivers) {
+            if (rx.pos().distSqr(near) <= maxSq) n++;
+        }
+        return n;
     }
 
     public void notifyTransmitterChanged(PairKey key) {
         PairBucket b = buckets.get(key);
         if (b == null || b.receivers.isEmpty()) return;
-        // Two-pass: update ALL receivers' strength + POWERED state FIRST (without
-        // firing neighbor waves), then fire neighbor updates AFTER. Critical when
-        // receivers have adjacent solid-block neighbors (e.g., redstone lamps next
-        // to each other): vanilla's hasNeighborSignal checks weak power through
-        // solid neighbors, so a stale strength on a later-iterated rx would make
-        // the earlier rx's lamp think it still has signal.
-        // Snapshot to avoid ConcurrentModificationException — notifyNeighbors()
-        // triggers vanilla updates that can cause OTHER BEs to call setRemoved
-        // (e.g., during chunk-unload-on-shutdown), which mutates b.receivers
-        // via removeReceiver while we iterate.
+
+        // Snapshot to avoid ConcurrentModificationException — notifyNeighbors() triggers
+        // vanilla updates that can cause OTHER BEs to call setRemoved (e.g. during
+        // chunk-unload-on-shutdown), which mutates b.receivers via removeReceiver.
         List<WirelessNode.Receiver> snapshot = new ArrayList<>(b.receivers);
+
+        ModConfig cfg = ModConfig.get();
+        boolean limited = cfg.rangeLocked;
+        long maxSq = (long) cfg.maxRange * cfg.maxRange;
+        // Unlimited range: the max is identical for every receiver — compute it once (O(T))
+        // instead of re-scanning all transmitters per receiver (O(R*T)).
+        int sharedMax = limited ? 0 : maxStrength(b);
+
+        // Two-pass: update ALL receivers' strength + POWERED state FIRST (without firing
+        // neighbor waves), then fire neighbor updates AFTER — and only for receivers whose
+        // emitted strength actually changed. The split avoids stale weak-power reads through
+        // solid conductors shared by sibling receivers; skipping unchanged receivers avoids
+        // firing pointless neighbor waves (most receivers are unchanged on any given edge,
+        // since strengths MAX-combine across transmitters).
+        List<WirelessNode.Receiver> changed = null;
         for (WirelessNode.Receiver rx : snapshot) {
-            rx.setStrengthSilent(currentStrengthFor(key, rx.pos()));
+            int strength = limited ? maxStrengthWithin(b, rx.pos(), maxSq) : sharedMax;
+            if (rx.setStrengthSilent(strength)) {
+                if (changed == null) changed = new ArrayList<>();
+                changed.add(rx);
+            }
         }
-        for (WirelessNode.Receiver rx : snapshot) {
-            rx.notifyNeighbors();
+        if (changed != null) {
+            for (WirelessNode.Receiver rx : changed) rx.notifyNeighbors();
         }
     }
 }

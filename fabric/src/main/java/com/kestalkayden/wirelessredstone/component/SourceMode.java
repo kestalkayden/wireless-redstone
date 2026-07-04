@@ -13,7 +13,10 @@ public enum SourceMode implements StringRepresentable {
 
     public static final Codec<SourceMode> CODEC = StringRepresentable.fromEnum(SourceMode::values);
     public static final StreamCodec<ByteBuf, SourceMode> STREAM_CODEC =
-        ByteBufCodecs.idMapper(i -> values()[i], SourceMode::ordinal);
+        ByteBufCodecs.idMapper(i -> {
+            SourceMode[] v = values();
+            return i >= 0 && i < v.length ? v[i] : ECHO;  // bounds-checked: a bad id decodes to default, not AIOOBE
+        }, SourceMode::ordinal);
 
     private final String name;
 

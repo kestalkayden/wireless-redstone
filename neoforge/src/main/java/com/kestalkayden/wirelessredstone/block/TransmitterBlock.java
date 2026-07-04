@@ -1,5 +1,6 @@
 package com.kestalkayden.wirelessredstone.block;
 
+import com.kestalkayden.wirelessredstone.access.EditAccess;
 import com.kestalkayden.wirelessredstone.component.ManualMode;
 import com.mojang.serialization.MapCodec;
 
@@ -133,6 +134,10 @@ public class TransmitterBlock extends BaseEntityBlock {
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof TransmitterBlockEntity be) {
+            if (!EditAccess.canEdit(player, be.ownerUuid())) {
+                EditAccess.notifyDenied(player);
+                return InteractionResult.SUCCESS;
+            }
             player.openMenu(be);
         }
         return InteractionResult.SUCCESS;
@@ -144,6 +149,10 @@ public class TransmitterBlock extends BaseEntityBlock {
     public static InteractionResult onSneakRightClick(Level level, BlockPos pos, Player player) {
         if (!(level.getBlockEntity(pos) instanceof TransmitterBlockEntity be)) return InteractionResult.PASS;
         if (!level.isClientSide()) {
+            if (!EditAccess.canEdit(player, be.ownerUuid())) {
+                EditAccess.notifyDenied(player);
+                return InteractionResult.SUCCESS;
+            }
             ManualMode mode = be.cycleManualMode();
             if (player instanceof ServerPlayer sp) {
                 sp.connection.send(new ClientboundSetActionBarTextPacket(
