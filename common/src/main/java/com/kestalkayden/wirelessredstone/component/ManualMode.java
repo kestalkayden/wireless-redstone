@@ -19,7 +19,10 @@ public enum ManualMode implements StringRepresentable {
 
     public static final Codec<ManualMode> CODEC = StringRepresentable.fromEnum(ManualMode::values);
     public static final StreamCodec<ByteBuf, ManualMode> STREAM_CODEC =
-        ByteBufCodecs.idMapper(i -> values()[i], ManualMode::ordinal);
+        ByteBufCodecs.idMapper(i -> {
+            ManualMode[] v = values();
+            return i >= 0 && i < v.length ? v[i] : TOGGLE;  // bounds-checked: a bad id decodes to default, not AIOOBE
+        }, ManualMode::ordinal);
 
     private final String name;
 

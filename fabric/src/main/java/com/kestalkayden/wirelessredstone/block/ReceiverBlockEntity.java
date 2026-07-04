@@ -133,20 +133,21 @@ public class ReceiverBlockEntity extends BlockEntity implements WirelessNode.Rec
     }
 
     @Override
-    public void setStrengthSilent(int newStrength) {
-        if (this.currentStrength == newStrength) return;
+    public boolean setStrengthSilent(int newStrength) {
+        if (this.currentStrength == newStrength) return false;
         this.currentStrength = newStrength;
         // Update POWERED visual via UPDATE_CLIENTS only — neighbor wave is deferred
         // to notifyNeighbors() so the registry can update all receivers first.
-        if (level == null || level.isClientSide()) return;
+        if (level == null || level.isClientSide()) return true;
         BlockState state = getBlockState();
-        if (!state.hasProperty(ReceiverBlock.POWERED)) return;
+        if (!state.hasProperty(ReceiverBlock.POWERED)) return true;
         boolean nowPowered = newStrength > 0;
         if (state.getValue(ReceiverBlock.POWERED) != nowPowered) {
             level.setBlock(worldPosition,
                 state.setValue(ReceiverBlock.POWERED, nowPowered),
                 Block.UPDATE_CLIENTS);
         }
+        return true;
     }
 
     @Override
@@ -203,7 +204,9 @@ public class ReceiverBlockEntity extends BlockEntity implements WirelessNode.Rec
     @Override
     public void setRemoved() {
         if (level instanceof ServerLevel sl) {
-            PairingRegistry.get(sl).removeReceiver(pairKey(), this);
+            // getIfPresent (not get) so teardown after level-unload doesn't resurrect the registry.
+            PairingRegistry registry = PairingRegistry.getIfPresent(sl);
+            if (registry != null) registry.removeReceiver(pairKey(), this);
         }
         super.setRemoved();
     }
@@ -245,10 +248,17 @@ public class ReceiverBlockEntity extends BlockEntity implements WirelessNode.Rec
         super.applyImplicitComponents(componentGetter);
         ReceiverConfig config = componentGetter.getOrDefault(
             ReceiverComponents.RECEIVER_CONFIG(), ReceiverConfig.DEFAULT);
+        // Components are applied AFTER the BE has already registered under its default key.
+        // Capture that key so we can move the registry entry to the configured key —
+        // otherwise a configured receiver placed from an item (break+replace, hopper,
+        // pick-block) stays in the (0,1,PUBLIC) bucket while pairKey() reports the
+        // configured key, silently receiving nothing.
+        PairKey oldKey = level instanceof ServerLevel ? pairKey() : null;
         this.frequency = config.frequency();
         this.channel = config.channel();
         this.privateMode = config.privateMode();
         this.editLock = config.editLock();
+        if (oldKey != null) rebindIfChanged(oldKey, pairKey());
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.kestalkayden.wirelessredstone.menu;
 
+import com.kestalkayden.wirelessredstone.access.EditAccess;
 import com.kestalkayden.wirelessredstone.block.TransmitterBlockEntity;
 import com.kestalkayden.wirelessredstone.pairing.PairingRegistry;
 
@@ -44,7 +45,7 @@ public class TransmitterMenu extends AbstractContainerMenu {
                     case DATA_PRIVATE -> be.privateMode() ? 1 : 0;
                     case DATA_EDIT_LOCK -> be.editLock() ? 1 : 0;
                     case DATA_RECEIVER_COUNT -> be.getLevel() instanceof ServerLevel sl
-                        ? PairingRegistry.get(sl).receiverCount(be.pairKey())
+                        ? PairingRegistry.get(sl).receiverCount(be.pairKey(), be.getBlockPos())
                         : 0;
                     default -> 0;
                 };
@@ -76,7 +77,10 @@ public class TransmitterMenu extends AbstractContainerMenu {
 
     @Override
     public boolean clickMenuButton(Player player, int id) {
-        if (be == null) return false;
+        // Reject stale BEs (block broken while the menu stayed open) so a click can't
+        // re-insert a removed node into the registry; and enforce ownership server-side.
+        if (be == null || be.isRemoved()) return false;
+        if (!EditAccess.canEdit(player, be.ownerUuid())) return false;
         int cmd = (id >>> 24) & 0xFF;
         int value = id & 0xFFFFFF;
 
@@ -86,7 +90,7 @@ public class TransmitterMenu extends AbstractContainerMenu {
             case CMD_FREQ -> { be.setFrequency(value); return true; }
             case CMD_CHAN -> { be.setChannel(value); return true; }
             case CMD_PRIVATE -> {
-                // TODO v0.2: gate behind a config that requires owner UUID match.
+                // Owner-gated above — only the owner/op/creative reaches here.
                 be.setPrivateMode(value != 0);
                 return true;
             }
@@ -98,7 +102,8 @@ public class TransmitterMenu extends AbstractContainerMenu {
     @Override
     public boolean stillValid(Player player) {
         return access.evaluate((level, pos) ->
-            player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) <= 64.0, true);
+            level.getBlockEntity(pos) == be
+                && player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) <= 64.0, true);
     }
 
     @Override

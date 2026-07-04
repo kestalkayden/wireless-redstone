@@ -134,23 +134,26 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
 
     public void setSourceMode(SourceMode mode) {
         if (this.sourceMode == mode) return;
+        int before = currentStrength();
         this.sourceMode = mode;
-        notifyCurrentKey();
+        if (currentStrength() != before) notifyCurrentKey();
         setChanged();
     }
 
     public void setFixedStrength(int strength) {
         int clamped = Math.max(1, Math.min(15, strength));
         if (this.fixedStrength == clamped) return;
+        int before = currentStrength();
         this.fixedStrength = clamped;
-        if (sourceMode == SourceMode.FIXED) notifyCurrentKey();
+        if (currentStrength() != before) notifyCurrentKey();
         setChanged();
     }
 
     /** Bumps manualMode to the next state and broadcasts the change. Returns the new mode. */
     public ManualMode cycleManualMode() {
+        int before = currentStrength();
         this.manualMode = manualMode.next();
-        notifyCurrentKey();
+        if (currentStrength() != before) notifyCurrentKey();
         setChanged();
         syncClient();
         return this.manualMode;
@@ -171,8 +174,12 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
 
     public void onRedstoneInputChanged(int newInput) {
         if (this.lastInputStrength == newInput) return;
+        int before = currentStrength();
         this.lastInputStrength = newInput;
-        notifyCurrentKey();
+        // Only re-broadcast when the emitted value actually changes. FIXED / ALWAYS_ON /
+        // ALWAYS_OFF absorb input changes (e.g. 5->10 stays fixedStrength) with no change
+        // to what receivers see, so skip the whole-network notify in that case.
+        if (currentStrength() != before) notifyCurrentKey();
     }
 
     private void rebindIfChanged(PairKey oldKey, PairKey newKey) {
@@ -252,14 +259,17 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
     @Override
     public void setRemoved() {
         if (level instanceof ServerLevel sl) {
-            PairKey key = pairKey();
-            PairingRegistry registry = PairingRegistry.get(sl);
-            registry.removeTransmitter(key, this);
-            // Skip neighbor notify during shutdown / chunk-unload teardown — calling
-            // updateNeighborsAt during chunk clearing hangs the shutdown. Receivers
-            // re-sync from the registry on next load via currentStrengthFor.
-            if (sl.getServer() != null && sl.getServer().isRunning()) {
-                registry.notifyTransmitterChanged(key);
+            // getIfPresent (not get) so teardown after level-unload doesn't resurrect the registry.
+            PairingRegistry registry = PairingRegistry.getIfPresent(sl);
+            if (registry != null) {
+                PairKey key = pairKey();
+                registry.removeTransmitter(key, this);
+                // Skip neighbor notify during shutdown / chunk-unload teardown — calling
+                // updateNeighborsAt during chunk clearing hangs the shutdown. Receivers
+                // re-sync from the registry on next load via currentStrengthFor.
+                if (sl.getServer() != null && sl.getServer().isRunning()) {
+                    registry.notifyTransmitterChanged(key);
+                }
             }
         }
         super.setRemoved();
@@ -309,6 +319,12 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
         super.applyImplicitComponents(componentGetter);
         TransmitterConfig config = componentGetter.getOrDefault(
             TransmitterComponents.TRANSMITTER_CONFIG(), TransmitterConfig.DEFAULT);
+        // Components are applied AFTER the BE has already registered under its default key
+        // (on load/placement). Capture that key so we can move the registry entry to the
+        // configured key — otherwise a configured block placed from an item (break+replace,
+        // hopper, pick-block) stays in the (0,1,PUBLIC) bucket while pairKey() reports the
+        // configured key, silently transmitting/receiving nothing.
+        PairKey oldKey = level instanceof ServerLevel ? pairKey() : null;
         this.frequency = config.frequency();
         this.channel = config.channel();
         this.privateMode = config.privateMode();
@@ -316,5 +332,6 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
         this.sourceMode = config.sourceMode();
         this.fixedStrength = config.fixedStrength();
         this.manualMode = config.manualMode();
+        if (oldKey != null) rebindIfChanged(oldKey, pairKey());
     }
 }

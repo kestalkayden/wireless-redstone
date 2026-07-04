@@ -1,5 +1,6 @@
 package com.kestalkayden.wirelessredstone.block;
 
+import com.kestalkayden.wirelessredstone.access.EditAccess;
 import com.mojang.serialization.MapCodec;
 
 import java.util.Map;
@@ -118,9 +119,8 @@ public class ReceiverBlock extends BaseEntityBlock {
 
     @Override
     protected int getDirectSignal(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
-        if (level.getBlockEntity(pos) instanceof ReceiverBlockEntity be) {
-            return be.currentStrength();
-        }
+        // Weak power only, like a vanilla redstone block: the receiver powers adjacent
+        // dust/components but does NOT strong-power a solid block through to its far side.
         return 0;
     }
 
@@ -132,6 +132,10 @@ public class ReceiverBlock extends BaseEntityBlock {
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof ReceiverBlockEntity be) {
+            if (!EditAccess.canEdit(player, be.ownerUuid())) {
+                EditAccess.notifyDenied(player);
+                return InteractionResult.SUCCESS;
+            }
             player.openMenu(be);
         }
         return InteractionResult.SUCCESS;

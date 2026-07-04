@@ -116,39 +116,50 @@ public class ReceiverScreen extends AbstractContainerScreen<ReceiverMenu> {
     }
 
     private void syncFromMenu() {
+        // Each field syncs independently — a pending edit on one must not skip the others
+        // (an early return here used to freeze the private/lock checkboxes while a freq or
+        // channel change was still in flight).
         if (channelField != null && !channelField.isFocused()) {
             int server = menu.channel();
+            boolean pending = false;
             if (pendingChannel != null) {
                 if (server == pendingChannel) pendingChannel = null;
-                else return;
+                else pending = true;
             }
-            String s = String.valueOf(server);
-            if (!s.equals(channelField.getValue())) channelField.setValue(s);
+            if (!pending) {
+                String s = String.valueOf(server);
+                if (!s.equals(channelField.getValue())) channelField.setValue(s);
+            }
         }
         if (frequencyField != null && !frequencyField.isFocused()) {
             int server = menu.frequency();
+            boolean pending = false;
             if (pendingFrequency != null) {
                 if (server == pendingFrequency) pendingFrequency = null;
-                else return;
+                else pending = true;
             }
-            String s = String.valueOf(server);
-            if (!s.equals(frequencyField.getValue())) frequencyField.setValue(s);
+            if (!pending) {
+                String s = String.valueOf(server);
+                if (!s.equals(frequencyField.getValue())) frequencyField.setValue(s);
+            }
         }
         if (privateCheckbox != null) {
             boolean server = menu.privateMode();
+            boolean pending = false;
             if (pendingPrivate != null) {
                 if (server == pendingPrivate) pendingPrivate = null;
-                else return;
+                else pending = true;
             }
-            if (privateCheckbox.isSelected() != server) privateCheckbox.setSelected(server);
+            if (!pending && privateCheckbox.isSelected() != server) privateCheckbox.setSelected(server);
         }
         if (editLockCheckbox != null) {
             boolean server = menu.editLock();
+            boolean pending = false;
             if (pendingEditLock != null) {
                 if (server == pendingEditLock) pendingEditLock = null;
-                else return;
+                else pending = true;
             }
-            if (editLockCheckbox.isSelected() != server) editLockCheckbox.setSelected(server);
+            if (!pending && editLockCheckbox.isSelected() != server) editLockCheckbox.setSelected(server);
         }
     }
 
