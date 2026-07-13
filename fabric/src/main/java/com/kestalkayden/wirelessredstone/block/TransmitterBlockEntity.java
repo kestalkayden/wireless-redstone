@@ -15,6 +15,7 @@ import com.kestalkayden.wirelessredstone.pairing.WirelessNode;
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentMap;
@@ -182,6 +183,32 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
         if (currentStrength() != before) notifyCurrentKey();
     }
 
+    /**
+     * Strongest redstone input from the six neighbors — but ignores weak power emitted by
+     * a receiver on this transmitter's OWN pairKey. Feeding a same-network receiver's output
+     * back into the transmitter's input forms a self-sustaining wireless latch: the transmitter
+     * would keep broadcasting after its real input (lever, comparator…) drops, held up only by
+     * the receiver it is driving. Cross-channel receivers are still read normally, so wireless
+     * logic (receiver on ch A -> transmitter on ch B) keeps working. Mirrors
+     * SignalGetter#getBestNeighborSignal otherwise (weak power + conductor direct signal).
+     */
+    public int readRedstoneInput() {
+        if (level == null) return 0;
+        PairKey myKey = pairKey();
+        int max = 0;
+        for (Direction dir : Direction.values()) {
+            BlockPos neighborPos = worldPosition.relative(dir);
+            if (level.getBlockEntity(neighborPos) instanceof WirelessNode.Receiver rx
+                    && rx.pairKey().equals(myKey)) {
+                continue; // our own network's echo — skip it to avoid latching
+            }
+            int signal = level.getSignal(neighborPos, dir);
+            if (signal >= 15) return 15;
+            if (signal > max) max = signal;
+        }
+        return max;
+    }
+
     private void rebindIfChanged(PairKey oldKey, PairKey newKey) {
         if (oldKey.equals(newKey)) {
             notifyCurrentKey();
@@ -249,7 +276,7 @@ public class TransmitterBlockEntity extends BlockEntity implements WirelessNode.
     /** Runs from WirelessRedstoneFabric.PENDING_TICK_INITS drain on END_SERVER_TICK. */
     public void tickInit() {
         if (isRemoved() || !(level instanceof ServerLevel sl)) return;
-        int signal = sl.getBestNeighborSignal(worldPosition);
+        int signal = readRedstoneInput();
         if (signal != lastInputStrength) {
             onRedstoneInputChanged(signal);
         } else {

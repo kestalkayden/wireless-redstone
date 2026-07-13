@@ -103,7 +103,7 @@ public class TransmitterBlock extends BaseEntityBlock {
     protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean isMoving) {
         super.onPlace(state, level, pos, oldState, isMoving);
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof TransmitterBlockEntity be) {
-            be.onRedstoneInputChanged(level.getBestNeighborSignal(pos));
+            be.onRedstoneInputChanged(be.readRedstoneInput());
         }
     }
 
@@ -112,7 +112,7 @@ public class TransmitterBlock extends BaseEntityBlock {
                                    Orientation orientation, boolean isMoving) {
         if (level.isClientSide()) return;
         if (level.getBlockEntity(pos) instanceof TransmitterBlockEntity be) {
-            be.onRedstoneInputChanged(level.getBestNeighborSignal(pos));
+            be.onRedstoneInputChanged(be.readRedstoneInput());
         }
     }
 
