@@ -39,7 +39,7 @@ public final class ReceiverBlocks {
                 .mapColor(MapColor.METAL)
                 .sound(SoundType.METAL)
                 .strength(0.5F)
-                .pushReaction(PushReaction.DESTROY)));
+                .pushReaction(PushReaction.POPPED)));
 
         RECEIVER_ITEM = Registry.register(BuiltInRegistries.ITEM, id,
             new ReceiverItem(RECEIVER, new Item.Properties().setId(itemKey).useBlockDescriptionPrefix()));

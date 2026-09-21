@@ -1,12 +1,12 @@
 # Wireless Redstone
 
-Wireless redstone transmitters and receivers for Minecraft 26.1.x. Pair them by channel + frequency, one transmitter feeds as many receivers as you want — up to 128 blocks away by default, configurable.
+Wireless redstone transmitters and receivers for Minecraft 26.3. Pair them by channel + frequency, one transmitter feeds as many receivers as you want — up to 128 blocks away by default, configurable.
 
 ## Requirements
 
-- Minecraft **26.1.x**
+- Minecraft **26.3**
 - Java **25**
-- Fabric Loader **0.18.4+** with **Fabric API**, *or* NeoForge **26.1+**
+- Fabric Loader **0.19.5+** with **Fabric API**, *or* NeoForge **26.3.0.7-beta+**
 
 ## Downloads
 

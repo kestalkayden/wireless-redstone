@@ -34,7 +34,7 @@ public final class ReceiverBlocks {
             .mapColor(MapColor.METAL)
             .sound(SoundType.METAL)
             .strength(0.5F)
-            .pushReaction(PushReaction.DESTROY));
+            .pushReaction(PushReaction.POPPED));
     });
 
     public static final DeferredItem<BlockItem> RECEIVER_ITEM = ITEMS.register("receiver", id -> {

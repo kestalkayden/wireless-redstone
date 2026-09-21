@@ -1,7 +1,6 @@
 package com.kestalkayden.wirelessredstone.block;
 
 import com.kestalkayden.wirelessredstone.access.EditAccess;
-import com.mojang.serialization.MapCodec;
 
 import java.util.Map;
 
@@ -34,8 +33,6 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class ReceiverBlock extends BaseEntityBlock {
 
-    public static final MapCodec<ReceiverBlock> CODEC = simpleCodec(ReceiverBlock::new);
-
     public static final EnumProperty<Direction> FACING = BlockStateProperties.FACING;
     public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
 
@@ -50,11 +47,6 @@ public class ReceiverBlock extends BaseEntityBlock {
     public ReceiverBlock(Properties properties) {
         super(properties);
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.UP).setValue(POWERED, false));
-    }
-
-    @Override
-    protected MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
     }
 
     @Override

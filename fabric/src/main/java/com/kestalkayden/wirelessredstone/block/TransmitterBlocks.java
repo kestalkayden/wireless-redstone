@@ -39,7 +39,7 @@ public final class TransmitterBlocks {
                 .mapColor(MapColor.METAL)
                 .sound(SoundType.METAL)
                 .strength(0.5F)
-                .pushReaction(PushReaction.DESTROY)));
+                .pushReaction(PushReaction.POPPED)));
 
         TRANSMITTER_ITEM = Registry.register(BuiltInRegistries.ITEM, id,
             new TransmitterItem(TRANSMITTER, new Item.Properties().setId(itemKey).useBlockDescriptionPrefix()));

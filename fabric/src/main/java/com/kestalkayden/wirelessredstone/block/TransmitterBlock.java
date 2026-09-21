@@ -2,7 +2,6 @@ package com.kestalkayden.wirelessredstone.block;
 
 import com.kestalkayden.wirelessredstone.access.EditAccess;
 import com.kestalkayden.wirelessredstone.component.ManualMode;
-import com.mojang.serialization.MapCodec;
 
 import java.util.Map;
 
@@ -39,8 +38,6 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class TransmitterBlock extends BaseEntityBlock {
 
-    public static final MapCodec<TransmitterBlock> CODEC = simpleCodec(TransmitterBlock::new);
-
     public static final EnumProperty<Direction> FACING = BlockStateProperties.FACING;
     public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
 
@@ -55,11 +52,6 @@ public class TransmitterBlock extends BaseEntityBlock {
     public TransmitterBlock(Properties properties) {
         super(properties);
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.UP).setValue(POWERED, false));
-    }
-
-    @Override
-    protected MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
     }
 
     @Override
