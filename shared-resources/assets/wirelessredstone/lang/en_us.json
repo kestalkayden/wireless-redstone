@@ -1,6 +1,8 @@
 {
   "block.wirelessredstone.transmitter": "Wireless Transmitter",
   "block.wirelessredstone.receiver": "Wireless Receiver",
+  "config.jade.plugin_wirelessredstone.transmitter": "Transmitter",
+  "config.jade.plugin_wirelessredstone.receiver": "Receiver",
   "gui.wirelessredstone.frequency": "Frequency:",
   "gui.wirelessredstone.channel": "Channel:",
   "gui.wirelessredstone.lock": "Lock",
